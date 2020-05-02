@@ -1,14 +1,11 @@
 // openGl.cpp: определяет точку входа для консольного приложения.
 //
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <iostream>
 #include <vector>
+//#include <windows.h>
 #include <glut.h>
 #include <time.h>
-
-#include "Ship.h"
-#include "Square.h"
-#include "AiFleet.h"
 
 using namespace std;
 
@@ -17,6 +14,71 @@ const short int Size_ship = 4;
 const unsigned short int Count_Ship = 7;
 
 
+struct Points
+{
+
+	float x, y;  // initializor
+	Points() { x = 0.0; y = 0.0; } // constructor
+
+	Points(float _x, float _y) : x(_x), y(_y) {}
+};
+
+class Square
+{
+public:
+	Points pts[4]; // square structure
+	bool flag_stay, flag_life;
+	int life_square;
+	int count_must_not;
+	int link_ship;
+	Square() // initialize constructor
+	{
+		pts[0] = Points(0, 0);
+		pts[1] = Points(0, 0);
+		pts[2] = Points(0, 0);
+		pts[3] = Points(0, 0);
+		flag_stay = false;
+		flag_life = false;
+		life_square=0;
+		count_must_not=0;
+		link_ship = -1;
+	};
+	void Draw_square(  )
+	{
+		if ((flag_stay) && (flag_life))
+		{
+			glColor3f(0.70, 0.00, 0.70);// поле
+			glBegin(GL_QUADS);
+
+			glVertex2d(pts[0].x,pts[0].y);
+			glVertex2d(pts[1].x, pts[1].y);
+			glVertex2d(pts[2].x, pts[2].y);
+			glVertex2d(pts[3].x, pts[3].y);
+
+			glEnd();
+		}
+		else 
+		{
+			if ((!flag_life)& (flag_stay))
+			{
+				glColor3f(0.70, 0.70, 0.00);
+				glBegin(GL_QUADS);
+
+				glVertex2d(pts[0].x, pts[0].y);
+				glVertex2d(pts[1].x, pts[1].y);
+				glVertex2d(pts[2].x, pts[2].y);
+				glVertex2d(pts[3].x, pts[3].y);
+
+				glEnd();
+			}
+		}
+	};
+
+
+	//void draw(Square *sqr); // draw square
+	Points mouse(int x, int y); // get mouse coordintaes
+	//Square* drag(Square *sqr, Points *mouse); // change points of sqr
+};
 
 
 Points mouse(int x, int y)
@@ -28,7 +90,7 @@ Points mouse(int x, int y)
 vector <vector <Square>> my_field;
 vector <Square> Ships_versions;
 vector <vector<Square>> enemy_field;
-/*
+
 class Ship
 {
 public:
@@ -36,9 +98,14 @@ public:
 	bool existence;
 	vector<short int> x;
 	vector<short int> y;
+	//int count_must_not;
+	vector <Points> count_must_not;
 	short int unsigned size_ship;
 	Ship()
 	{
+		count_must_not.resize(1);
+		count_must_not[0] = Points(-1,-1);
+		//count_must_not = Points(-1, -1);
 		gun = 0;
 		existence = true;
 		x.resize(1, -1);
@@ -63,11 +130,11 @@ public:
 		_vec.resize(_nSize, _value);
 	}
 };
-*/
+
 
 vector <Ship> my_ship;
 vector <Ship> enemy_ship;
-short int number_ship=-1;
+ short int number_ship=-1;
 short int size_ship=-1;
 
 bool line_hitting(Points mouse_coord, int line_number,bool fl)
@@ -97,10 +164,48 @@ bool line_hitting(Points mouse_coord, int line_number,bool fl)
 			{
 				if (fl)
 				{
+					int count_must_not=0;
 					my_ship.resize(number_ship + 1);
+					//my_ship[number_ship].count_must_not.resize(size_ship * 2 + 6,-1);
+					my_ship[number_ship].count_must_not.resize(size_ship * 2 + 6);
+					//my_ship[number_ship].count_must_not[count_must_not].x = -1;
+					//my_ship[number_ship].count_must_not[count_must_not].y = -1;
+					//my_ship
 					my_ship[number_ship].initVecVec(my_ship[number_ship].x, size_ship);
 					my_ship[number_ship].initVecVec(my_ship[number_ship].y, size_ship);
 					my_ship[number_ship].size_ship = size_ship-1;
+
+					for (int sh7 = 0; sh7 < size_ship;sh7++)
+					{
+						if (i + size_ship <= size_field)
+						{
+							if ((my_field[line_number][i + sh7].flag_stay == true) || (my_field[line_number][i + sh7].count_must_not != 0))
+							{
+								number_ship--;
+								return false;
+							}
+						}
+						else
+						{
+							if (line_number + size_ship <= size_field)
+							{
+								if ((my_field[line_number + sh7][i].flag_stay == true) || (my_field[line_number + sh7][i].count_must_not != 0))
+								{
+									number_ship--;
+									return false;
+								}
+							}
+							else
+							{
+								if ((my_field[line_number][i - sh7].flag_stay == true) && (my_field[line_number][i - sh7].count_must_not != 0))
+								{
+									number_ship--;
+									return false;
+								}
+							}
+						}
+					}
+
 					for (int sh7 = 0; sh7 < size_ship; sh7++)
 					{
 						if (i + size_ship <= size_field)
@@ -112,44 +217,117 @@ bool line_hitting(Points mouse_coord, int line_number,bool fl)
 								my_field[line_number][i + sh7].life_square = 1;
 								my_field[line_number][i + sh7].flag_stay = true;
 								my_field[line_number][i + sh7].flag_life = true;
-								/*if (line_number + 1 < size_field)
+								if (line_number + 1 < size_field)
 								{
-									my_field[line_number+1][i + sh7].count_must_not++;
+									my_field[line_number + 1][i + sh7].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
+
 								}
 								if (line_number -1 > -1)
 								{
 									my_field[line_number - 1][i + sh7].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
 								if ((i +sh7+ 1 < size_field) && (sh7==size_ship-1))
 								{
 									my_field[line_number][i + sh7+1].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7 + 1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
 								if ((i + sh7 - 1 > -1) && (sh7 == 0))
 								{
 									my_field[line_number][i + sh7-1].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7-1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
 								if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number + 1 < size_field))
 								{
 									my_field[line_number + 1][i + sh7 + 1].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7 + 1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
 								if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number + 1 < size_field))
 								{
 									my_field[line_number + 1][i + sh7 - 1].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7 - 1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
+
 								if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number - 1 > -1))
 								{
 									my_field[line_number - 1][i + sh7 + 1].count_must_not++;
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7 + 1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
 								}
 								if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number - 1 > -1))
 								{
 									my_field[line_number - 1][i + sh7 - 1].count_must_not++;
-								}*/
+
+									my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+									my_ship[number_ship].count_must_not[count_must_not].x = i + sh7 - 1;
+									count_must_not++;
+									/*if (count_must_not<size_ship * 2 + 6)
+									{
+										my_ship[number_ship].count_must_not[count_must_not].y = -1;
+										my_ship[number_ship].count_must_not[count_must_not].x = -1;
+									}*/
+								}
 
 
 								if (my_field[line_number][i + sh7].link_ship == -1)
 								{
 									my_field[line_number][i + sh7].link_ship = number_ship;
-									//cout << number_ship;
 								}
 							}
 						}
@@ -169,39 +347,64 @@ bool line_hitting(Points mouse_coord, int line_number,bool fl)
 										my_field[line_number + sh7][i].link_ship = number_ship;
 									}
 
-									/*if (line_number + 1 < size_field)
+									if ((line_number - 1 > -1) && (sh7 == 0))
 									{
-										my_field[line_number + 1][i + sh7].count_must_not++;
+										my_field[line_number - 1][i].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+										my_ship[number_ship].count_must_not[count_must_not].x = i;
+										count_must_not++;
+										if (i - 1 > -1)
+										{
+											my_field[line_number - 1][i - 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i - 1;
+											count_must_not++;
+										}
+										if (i + 1 < size_field)
+										{
+											my_field[line_number - 1][i + 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+											count_must_not++;
+										}
 									}
-									if (line_number - 1 > -1)
+									if (i - 1 > -1)
 									{
-										my_field[line_number - 1][i + sh7].count_must_not++;
+										my_field[line_number + sh7][i - 1].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number + sh7;
+										my_ship[number_ship].count_must_not[count_must_not].x = i - 1;
+										count_must_not++;
 									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1))
+									if (i + 1 < size_field)
 									{
-										my_field[line_number][i + sh7 + 1].count_must_not++;
+										my_field[line_number + sh7][i + 1].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number + sh7;
+										my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+										count_must_not++;
 									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0))
-									{
-										my_field[line_number][i + sh7 - 1].count_must_not++;
-									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number + 1 < size_field))
-									{
-										my_field[line_number + 1][i + sh7 + 1].count_must_not++;
-									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number + 1 < size_field))
-									{
-										my_field[line_number + 1][i + sh7 - 1].count_must_not++;
-									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number - 1 > -1))
-									{
-										my_field[line_number - 1][i + sh7 + 1].count_must_not++;
-									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number - 1 > -1))
-									{
-										my_field[line_number - 1][i + sh7 - 1].count_must_not++;
-									}*/
+									
 
+									if ((sh7 == size_ship-1) && (line_number + sh7+1 < size_field))
+									{
+										my_field[line_number + sh7+1][i].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number + sh7+1;
+										my_ship[number_ship].count_must_not[count_must_not].x = i;
+										count_must_not++;
+										if (i - 1 > -1)
+										{
+											my_field[line_number + sh7+1][i - 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number + sh7+1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i - 1;
+											count_must_not++;
+										}
+										if (i + 1 < size_field)
+										{
+											my_field[line_number + sh7+1][i + 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number + sh7+1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+											count_must_not++;
+										}
+									}									
 								}
 							}
 							else
@@ -217,42 +420,73 @@ bool line_hitting(Points mouse_coord, int line_number,bool fl)
 									{
 										my_field[line_number][i - sh7].link_ship = number_ship;
 									}
-									/*if (line_number + 1 < size_field)
+
+									if ((sh7==0) && (i + 1 <size_field))
 									{
-										my_field[line_number + 1][i + sh7].count_must_not++;
+										my_field[line_number][i + 1].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number;
+										my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+										count_must_not++;
+										if (line_number-1>-1)
+										{
+											my_field[line_number-1][i + 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number-1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+											count_must_not++;
+										}
+										if (line_number + 1<size_field)
+										{
+											my_field[line_number + 1][i + 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i + 1;
+											count_must_not++;
+										}
 									}
+
+									if (line_number + 1 < size_field)
+									{
+										my_field[line_number + 1][i - sh7].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+										my_ship[number_ship].count_must_not[count_must_not].x = i - sh7;
+										count_must_not++;
+									}
+									
 									if (line_number - 1 > -1)
 									{
-										my_field[line_number - 1][i + sh7].count_must_not++;
+										my_field[line_number - 1][i - sh7].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+										my_ship[number_ship].count_must_not[count_must_not].x = i - sh7;
+										count_must_not++;
 									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1))
+
+									if ((sh7 + 1 == size_ship)&&(line_number-sh7-1>-1))
 									{
-										my_field[line_number][i + sh7 + 1].count_must_not++;
+										my_field[line_number][i - sh7 - 1].count_must_not++;
+										my_ship[number_ship].count_must_not[count_must_not].y = line_number;
+										my_ship[number_ship].count_must_not[count_must_not].x = i - sh7 - 1;
+										count_must_not++;
+										if (line_number - 1>-1)
+										{
+											my_field[line_number - 1][i - sh7 - 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number - 1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i - sh7 - 1;
+											count_must_not++;
+										}
+										if (line_number + 1<size_field)
+										{
+											my_field[line_number + 1][i - sh7 - 1].count_must_not++;
+											my_ship[number_ship].count_must_not[count_must_not].y = line_number + 1;
+											my_ship[number_ship].count_must_not[count_must_not].x = i - sh7 - 1;
+											count_must_not++;
+										}
 									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0))
-									{
-										my_field[line_number][i + sh7 - 1].count_must_not++;
-									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number + 1 < size_field))
-									{
-										my_field[line_number + 1][i + sh7 + 1].count_must_not++;
-									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number + 1 < size_field))
-									{
-										my_field[line_number + 1][i + sh7 - 1].count_must_not++;
-									}
-									if ((i + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (line_number - 1 > -1))
-									{
-										my_field[line_number - 1][i + sh7 + 1].count_must_not++;
-									}
-									if ((i + sh7 - 1 > -1) && (sh7 == 0) && (line_number - 1 > -1))
-									{
-										my_field[line_number - 1][i + sh7 - 1].count_must_not++;
-									}*/
+									
 								}
 							}
 						}
 					}
+					//count_must_not--;
+					my_ship[number_ship].count_must_not.resize(count_must_not);
 					size_ship = 0;
 					return true;
 
@@ -271,75 +505,67 @@ bool line_hitting(Points mouse_coord, int line_number,bool fl)
 						my_field[my_ship[number_delete].x[sh7]][my_ship[number_delete].y[sh7]].flag_stay = false;
 						my_field[my_ship[number_delete].x[sh7]][my_ship[number_delete].y[sh7]].flag_life = false;
 						my_field[my_ship[number_delete].x[sh7]][my_ship[number_delete].y[sh7]].link_ship = -1;
-						/*if (my_ship[number_delete].x[sh7] + 1 < size_field)
-						{
-							my_field[my_ship[number_delete].x[sh7] + 1][my_ship[number_delete].y[sh7] + sh7].count_must_not++;
-						}
-						if (my_ship[number_delete].x[sh7] - 1 > -1)
-						{
-							my_field[my_ship[number_delete].x[sh7] - 1][my_ship[number_delete].y[sh7] + sh7].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 + 1 < size_field) && (sh7 == size_ship - 1))
-						{
-							my_field[my_ship[number_delete].x[sh7]][my_ship[number_delete].y[sh7] + sh7 + 1].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 - 1 > -1) && (sh7 == 0))
-						{
-							my_field[my_ship[number_delete].x[sh7]][my_ship[number_delete].y[sh7] + sh7 - 1].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (my_ship[number_delete].x[sh7] + 1 < size_field))
-						{
-							my_field[my_ship[number_delete].x[sh7] + 1][my_ship[number_delete].y[sh7] + sh7 + 1].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 - 1 > -1) && (sh7 == 0) && (my_ship[number_delete].x[sh7] + 1 < size_field))
-						{
-							my_field[my_ship[number_delete].x[sh7] + 1][my_ship[number_delete].y[sh7] + sh7 - 1].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 + 1 < size_field) && (sh7 == size_ship - 1) && (my_ship[number_delete].x[sh7] - 1 > -1))
-						{
-							my_field[my_ship[number_delete].x[sh7] - 1][my_ship[number_delete].y[sh7] + sh7 + 1].count_must_not++;
-						}
-						if ((my_ship[number_delete].y[sh7] + sh7 - 1 > -1) && (sh7 == 0) && (my_ship[number_delete].x[sh7] - 1 > -1))
-						{
-							my_field[my_ship[number_delete].x[sh7] - 1][my_ship[number_delete].y[sh7] + sh7 - 1].count_must_not++;
-						}*/
 					}
+					
+					/*for (int sh9 = 0; sh9 < size_ship * 2 + 6; sh9++)//(int(my_ship[number_delete].count_must_not.size())); sh9++)
+					{
+						cout << my_ship[number_delete].count_must_not[sh9].y << "    " << my_ship[number_delete].count_must_not[sh9].x << endl;
+					}*/
+
+					for (int sh9 = 0; sh9<(int(my_ship[number_delete].count_must_not.size())); sh9++) //< size_ship * 2 + 6;sh9++)//(int(my_ship[number_delete].count_must_not.size())); sh9++)
+					{
+						//cout << (my_ship[number_delete].count_must_not.size()) << endl;
+						if ((my_ship[number_delete].count_must_not[sh9].x >= 0) && (my_ship[number_delete].count_must_not[sh9].y >= 0))
+						{
+							my_field[my_ship[number_delete].count_must_not[sh9].y][my_ship[number_delete].count_must_not[sh9].x].count_must_not--;
+							if ((my_field[my_ship[number_delete].count_must_not[sh9].y][my_ship[number_delete].count_must_not[sh9].x].count_must_not) < 0)
+							{
+								cout << "warning!!!" << endl;
+								cout << my_ship[number_delete].count_must_not[sh9].y << "    " << my_ship[number_delete].count_must_not[sh9].x << endl;
+							}
+							/*else
+							{
+								cout << "normal" << endl;
+								cout << my_ship[number_delete].count_must_not[sh9].y << "    " << my_ship[number_delete].count_must_not[sh9].x << endl;
+							}*/
+						}
+						
+					}
+					
 					size_ship = 0;
 					number_ship--;
-					//cout << number_delete << endl;
-					//cout << number_ship << endl;
-					for (int sh7 = number_delete; sh7 < number_ship; sh7++)
+					
+					//cout << number_delete<<endl;
+					//cout << number_ship <<"  v    " <<endl;
+					for (int sh7 = number_delete; sh7 < number_ship+1; sh7++)
 					{
+						my_ship[sh7].count_must_not.resize(my_ship[sh7 + 1].count_must_not.size());
+						for (int sh9 = 0; sh9 < my_ship[sh7 + 1].count_must_not.size();sh9++)
+						{
+							my_ship[sh7].count_must_not[sh9].x = my_ship[sh7+1].count_must_not[sh9].x;
+							my_ship[sh7].count_must_not[sh9].y = my_ship[sh7+1].count_must_not[sh9].y;
+						}
 						my_ship[sh7].x.resize( my_ship[sh7 + 1].size_ship+1);
 						my_ship[sh7].y.resize(my_ship[sh7 + 1].size_ship+1);
-						my_ship[sh7].size_ship = 1;
-						my_ship[sh7].x = my_ship[sh7+1].x;
-						my_ship[sh7].y = my_ship[sh7 + 1].y;
+						my_ship[sh7].size_ship = my_ship[sh7 + 1].size_ship;//1;
+						//for 
+						
+						for (int sh8 = 0; sh8 <= my_ship[sh7].size_ship;sh8++)
+						{
+							my_ship[sh7].x[sh8] = my_ship[sh7 + 1].x[sh8];
+							my_ship[sh7].y[sh8] = my_ship[sh7 + 1].y[sh8];
+							my_field[my_ship[sh7].x[sh8]][my_ship[sh7].y[sh8]].link_ship = sh7;
+							//cout << sh8 << endl;
+						}
 					}
+
 					return true;
 				}
 
 			}
 		}
 	}
-	//else
-	//{
-			//cout << number_ship << endl;
-			/*for (int sh5 = 0; sh5 < number_ship; sh5++)
-			{
-			cout << my_ship[sh5].x[0] << endl;
-			}*/
-		//cout << "No More!" << endl;
-			//string message = "You did not enter";
-			//MessageBox(message);
-			//ShowMessage(" ");
-	//}
 		return false;
-	//}
-	//else
-	//{
-	//	return false;
-	//}
 }
 
 bool hitting(Points mouse_coord, bool fl)
@@ -598,6 +824,73 @@ void initSh(unsigned int _nSize)
 	Ships_versions.resize(_nSize);
 }
 
+const int damage_pushka = 100;
+const int damage_torpeda = 100;
+const int damage_raketa = 100;
+const int length_torpeda = 3;
+const int radius_raketa = 3;
+const int shards_raketa = 3;
+
+void shot(int gun, int x, int y, vector <vector <Square> >& field, bool direction = true)
+{
+	switch (gun)
+	{
+	case 0: { if (field.at(x).at(y).flag_stay == true)
+	{
+		if (field.at(x).at(y).life_square > damage_pushka)
+		{
+			field.at(x).at(y).life_square = field.at(x).at(y).life_square - damage_pushka;
+		}
+		else field.at(x).at(y).life_square = 0;
+	}
+	}
+		  break;
+	case 1: {int j = 0;
+		for (int i = 0; i < length_torpeda; i++)
+		{
+			if (direction == false) { j = i; }
+			if ((x + i - j + 1 > size_field) || (y + j + 1 > size_field)) continue;
+			if (field.at(x + i - j).at(y + j).flag_stay == true)
+			{
+				if (field.at(x + i - j).at(y + j).life_square > damage_torpeda)
+				{
+					field.at(x + i - j).at(y + j).life_square = field.at(x + i - j).at(y + j).life_square - damage_torpeda;
+				}
+				else field.at(x + i - j).at(y + j).life_square = 0;
+			}
+			else continue;
+		}
+	}
+		  break;
+	case 2: {int m = 0, n = 0;
+		bool good;
+		for (int i = 0; i < shards_raketa; i++)
+		{
+			if (i > 0)
+			{
+				good = false;
+				while (good == false)
+				{
+					m = rand() % 7 - 3;
+					n = rand() % 7 - 3;
+					if ((sqrt((m * m) + (n * n)) <= 3) && (x + m + 1 <= size_field) && (y + n + 1 <= size_field) && (x + m >= 0) && (y + n >= 0)) { good = true; }
+					cout << sqrt((m * m) + (n * n)) << endl;
+				}
+			}
+			if (field.at(x + m).at(y + n).flag_stay == true)
+			{
+				if (field.at(x + m).at(y + n).life_square > damage_raketa)
+				{
+					field.at(x + m).at(y + n).life_square = field.at(x + m).at(y + n).life_square - damage_raketa;
+				}
+				else field.at(x + m).at(y + n).life_square = 0;
+			}
+			else continue;
+		}
+	}
+		  break;
+	}
+}
 
 int main(int argc, char **argv)
 {

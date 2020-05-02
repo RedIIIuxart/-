@@ -47,7 +47,7 @@
     <ClCompile Include="AiShip.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\openGl.cpp">
+    <ClCompile Include="openGl.cpp">
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
